@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ nginx_site_title }}</title>
+</head>
+<body>
+  <h1>{{ nginx_site_title }}</h1>
+  <p>Rendered by Ansible on <strong>{{ inventory_hostname }}</strong> at {{ ansible_date_time.iso8601 | default('n/a') }}</p>
+  <p>Worker connections: {{ nginx_worker_connections }}</p>
+</body>
+</html>

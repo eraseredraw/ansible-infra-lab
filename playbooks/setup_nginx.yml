@@ -1,21 +1,58 @@
 ---
 - name: Install and configure Nginx
   hosts: webservers
-  become: yes
+  become: true
+
+  vars:
+    nginx_site_title: "Managed by Ansible"
+    nginx_worker_connections: 1024
+
+  handlers:
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+
   tasks:
     - name: Install Nginx
       apt:
         name: nginx
         state: present
-        update_cache: yes
+        update_cache: true
 
-    - name: Start Nginx service
+    - name: Configure worker connections
+      lineinfile:
+        path: /etc/nginx/nginx.conf
+        regexp: '^\s*worker_connections'
+        line: "    worker_connections {{ nginx_worker_connections }}"
+        backup: true
+      notify: Reload nginx
+
+    - name: Deploy index page from template
+      template:
+        src: index.html.j2
+        dest: /var/www/html/index.html
+        mode: "0644"
+
+    - name: Ensure Nginx is running and enabled
       service:
         name: nginx
         state: started
-        enabled: yes
+        enabled: true
 
-    - name: Create custom index page
-      copy:
-        content: "<h1>Managed by Ansible</h1>"
-        dest: /var/www/html/index.html
+    - name: Smoke test — Nginx answers on port 80
+      uri:
+        url: "http://{{ ansible_host }}"
+        status_code: 200
+        return_content: true
+      register: nginx_probe
+      retries: 5
+      delay: 2
+      until: nginx_probe.status == 200
+
+    - name: Fail if the template did not render
+      assert:
+        that:
+          - nginx_site_title in nginx_probe.content
+        fail_msg: "Index page is missing the expected content"
+        success_msg: "Nginx is serving the Ansible-managed page"

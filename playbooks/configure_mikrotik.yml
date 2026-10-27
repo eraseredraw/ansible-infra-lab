@@ -3,7 +3,7 @@
 # Требуется коллекция community.routeros: `ansible-galaxy collection install community.routeros`
 - name: Configure basic MikroTik settings
   hosts: mikrotiks
-  gather_facts: no
+  gather_facts: false
   tasks:
     - name: Set router identity
       community.routeros.api:
@@ -22,4 +22,4 @@
         path: ip service
         attributes:
           name: ssh
-          disabled: no
+          disabled: false

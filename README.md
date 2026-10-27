@@ -1,51 +1,76 @@
-# Ansible Infrastructure Lab
+# Ansible Infra Lab
 
-Этот репозиторий демонстрирует навыки автоматизации инфраструктуры с использованием **Ansible**. Он включает примеры настройки веб-серверов и сетевого оборудования.
+[![CI](https://github.com/eraseredraw/ansible-infra-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/eraseredraw/ansible-infra-lab/actions/workflows/ci.yml)
 
-## 🚀 Возможности
-- Автоматическая установка и настройка **Nginx** на Linux-серверах.
-- Пример интеграции с сетевым оборудованием (**MikroTik**).
-- Чистая структура проекта с разделением инвентаря и плейбуков.
+Публичная лаборатория по Ansible: минимальные воспроизводимые стенды для проверки поведения модулей и всего цикла «плейбук → линт → driven-run → applied».
 
-## 📂 Структура проекта
-```text
-.
-├── inventory.ini          # Файл инвентаризации хостов
-├── playbooks/             # Директория с плейбуками
-│   ├── setup_nginx.yml    # Установка и настройка Nginx
-│   └── configure_mikrotik.yml # Настройка MikroTik (пример)
-└── README.md
+## Статус репозитория
+
+Это **учебно-проверочный стенд**, а не production-конфигурация. Здесь нет секретов, инвентарь содержит только тестовые адреса, а плейбуки намеренно маленькие — чтобы удобно было ломать и чинить.
+
+Рабочие плейбуки с реальным инвентарём, vault-файлами и ролями лежат в закрытых репозиториях и публично не публикуются. Так что вопрос «почему тут два плейбука» имеет простой ответ: публичный слой — это то, что показывать можно, а не то, что делалось.
+
+## Что здесь проверяется
+
+- Поведение модулей `apt` / `service` / `template` / `linefile` и их идемпотентность через `--check --diff`.
+- Реакция на изменения: `notify` → handler `Reload nginx`, а не рестарт сервиса на каждом прогоне.
+- Драйвер проверки без целевых хостов: `make syntax` и `make lint` падают на битом YAML до того, как что-то поедет на сервер.
+- Пост-факт проверка результата: `uri` + `assert` подтверждают, что шаблон действительно отрендерился на сервере, а не что таск «успешно прошёл».
+- Работа с сетевым оборудованием через `community.routeros.api` (отдельный connection-плагин, не SSH).
+
+## Структура
+
+```
+inventory.ini               тестовый инвентарь (webservers, mikrotiks)
+playbooks/
+  setup_nginx.yml           установка Nginx + handler + smoke-test
+  configure_mikrotik.yml    базовые настройки MikroTik через RouterOS API
+templates/index.html.j2     шаблон, отдаваемый на сервер
+Makefile                    syntax / lint / check / test / clean
+.github/workflows/ci.yml    yamllint + syntax-check при каждом push
 ```
 
-## 🛠️ Как использовать
+## Быстрый старт
 
-### 1. Подготовка
-Убедитесь, что у вас установлен Python и Ansible:
 ```bash
 pip install ansible
+
+make check        # синтаксис + ansible-lint, хосты не нужны
+make test         # --check --diff против инвентаря (нужны доступные хосты)
+make help         # список целей
 ```
 
-### 2. Настройка инвентаря
-Отредактируйте файл `inventory.ini`, указав IP-адреса ваших тестовых машин и данные для подключения:
-```ini
-[webservers]
-192.168.1.10 ansible_user=admin ansible_ssh_pass=your_password
+Или руками:
 
-[mikrotiks]
-192.168.1.1 ansible_user=admin ansible_connection=local
-```
-
-### 3. Запуск плейбуков
-Для установки Nginx:
 ```bash
+ansible-playbook --syntax-check -i inventory.ini playbooks/setup_nginx.yml
+ansible-playbook --check --diff -i inventory.ini playbooks/setup_nginx.yml
 ansible-playbook playbooks/setup_nginx.yml -i inventory.ini
 ```
 
-## 🧪 Тестирование
-После запуска плейбука `setup_nginx.yml` вы можете проверить работу сервера, открыв в браузере адрес вашего хоста из группы `[webservers]`. Вы должны увидеть страницу с надписью "Managed by Ansible".
+Для MikroTik-плейбука нужна коллекция:
 
-## 📚 Стек технологий
-- **Ansible**: Инструмент автоматизации.
-- **Linux (Ubuntu/CentOS)**: Целевые ОС для веб-серверов.
-- **Nginx**: Веб-сервер.
-- **MikroTik RouterOS**: Пример сетевого устройства.
+```bash
+ansible-galaxy collection install community.routeros
+```
+
+## Локальный стенд без серверов
+
+Прогонять есть на чем без покупки VDS — Docker подходит для обоих кейсов:
+
+```bash
+docker run -d --name nginx-test -p 8080:80  nginx:latest
+# затем в inventory.ini: 127.0.0.1 ansible_port=2222 ...
+# либо через ssh-сервер в контейнере, либо ansible -c local
+```
+
+## Что осознанно не сделано
+
+- Роли и `galaxy`-структура: стенд плоский, роли начинались там, где их нельзя показать.
+- `ansible-vault` с реальными секретами: в публичном репозитории секретов быть не должно.
+- Метрики/отчёты (`--profile`, callback plugins) — следующий кандидат для этой лаборатории.
+- CI: проверка линтом на каждом push выглядит здесь уместно.
+
+## Стек
+
+Ansible · YAML · Jinja2 · Nginx · Linux · MikroTik RouterOS API
