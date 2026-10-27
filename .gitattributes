@@ -1,6 +1,0 @@
-# Ansible-контент — основной язык репозитория; Makefile и README — служебные.
-*.yml linguist-language=YAML
-*.yaml linguist-language=YAML
-*.j2 linguist-language=Jinja
-Makefile linguist-detectable=false
-*.md linguist-documentation=true
