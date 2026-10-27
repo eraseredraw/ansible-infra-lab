@@ -1,0 +1,25 @@
+---
+# Пример настройки базовых параметров MikroTik через RouterOS API.
+# Требуется коллекция community.routeros: `ansible-galaxy collection install community.routeros`
+- name: Configure basic MikroTik settings
+  hosts: mikrotiks
+  gather_facts: no
+  tasks:
+    - name: Set router identity
+      community.routeros.api:
+        hostname: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password | default('admin') }}"
+        path: system identity
+        attributes:
+          name: "{{ inventory_hostname }}-gw"
+
+    - name: Enable SSH service
+      community.routeros.api:
+        hostname: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password | default('admin') }}"
+        path: ip service
+        attributes:
+          name: ssh
+          disabled: no

@@ -1,0 +1,14 @@
+# Ansible
+*.retry
+vault-password.txt
+group_vars/all/vault.yml
+host_vars/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS
+.DS_Store
